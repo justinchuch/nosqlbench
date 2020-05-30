@@ -1,0 +1,80 @@
+# nb -v run driver=cql yaml=mongodb-cassandra-uuid tags=phase:schema host=dsehost
+description: An example of a basic keyvalue table that should match with mongo-basic-uuid
+
+scenarios:
+  default:
+    - run driver=cql tags==phase:schema threads==1 cycles==UNDEF
+    - run driver=cql tags==phase:rampup cycles===TEMPLATE(rampup-cycles,1000000) threads=auto
+    - run driver=cql tags==phase:main cycles===TEMPLATE(main-cycles,1000000) threads=auto
+bindings:
+  seq_uuid: Mod(<<uuidCount:1000000>>); ToHashedUUID() -> java.util.UUID
+  rw_uuid: <<uuidDist:Uniform(0,1000000)->long>>; ToInt(); ToHashedUUID() -> java.util.UUID
+  seq_key: Mod(<<keyCount:1000000>>L); ToInt()
+  seq_value: Mod(<<valueCount:1000000000>>L); <<valueSizeDist:Hash()>>; ToLong()
+  rw_key: <<keyDist:Uniform(0,1000000)->long>>; ToInt()
+  rw_value: <<valDist:Uniform(0,1000000000)->long>>; <<valueSizeDist:Hash()>>; ToLong()
+
+blocks:
+  - name: schema
+    tags:
+      phase: schema
+    params:
+      prepared: false
+    statements:
+      - create-keyspace: |
+          create keyspace if not exists <<keyspace:testdbcass>>
+          WITH replication = {'class': 'SimpleStrategy', 'replication_factor': '<<rf:1>>'}
+          AND durable_writes = true;
+        tags:
+          name: create-keyspace
+      - create-table: |
+          create table if not exists <<keyspace:testdbcass>>.<<table:keyvalueuuid>> (
+          "_id" UUID,
+          key int,
+          value bigint,
+          PRIMARY KEY ("_id")
+          );
+        tags:
+          name: create-table
+  - name: rampup
+    tags:
+      phase: rampup
+    params:
+      cl: <<write_cl:LOCAL_QUORUM>>
+    statements:
+      - rampup-insert: |
+          insert into <<keyspace:testdbcass>>.<<table:keyvalueuuid>>
+          ("_id", key, value)
+          values ({seq_uuid}, {seq_key}, {seq_value});
+        tags:
+          name: rampup-insert
+  - name: main-read
+    tags:
+      phase: main
+      type: read
+    params:
+      ratio: <<read_ratio:1>>
+      cl: <<read_cl:LOCAL_QUORUM>>
+    statements:
+      - main-select: |
+          select * from <<keyspace:testdbcass>>.<<table:keyvalueuuid>> where "_id" = {rw_uuid};
+        tags:
+          name: main-select
+      - main-select-allowfiltering: |
+          select * from <<keyspace:testdbcass>>.<<table:keyvalueuuid>> where "_id" = {rw_uuid} allow filtering;
+        tags:
+          name: main-select-allowfiltering
+  - name: main-write
+    tags:
+      phase: main
+      type: write
+    params:
+      ratio: <<write_ratio:1>>
+      cl: <<write_cl:LOCAL_QUORUM>>
+    statements:
+      - main-insert: |
+          insert into <<keyspace:testdbcass>>.<<table:keyvalueuuid>>
+          ("_id", key, value)
+          values ({rw_uuid}, {rw_key}, {rw_value});
+        tags:
+          name: main-insert
