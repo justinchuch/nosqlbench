@@ -29,6 +29,21 @@ blocks:
           readPreference: primary
         tags:
            name: rampup-insert
+  - name: verify
+    tags:
+      phase: verify
+      type: read
+    params:
+      cl: <<read_cl:LOCAL_QUORUM>>
+    statements:
+      - verify-find: |
+          {
+            find: "<<collection:keyvalueuuid>>",
+            filter: { _id: UUID("{seq_uuid}") }
+          }
+        verify-fields: _id->seq_uuid, key->seq_key, value->seq_value
+        tags:
+          name: verify
   - name: main-read
     tags:
       phase: main

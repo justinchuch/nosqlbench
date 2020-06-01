@@ -48,6 +48,18 @@ blocks:
           values ({seq_uuid}, {seq_key}, {seq_value});
         tags:
           name: rampup-insert
+  - name: verify
+    tags:
+      phase: verify
+      type: read
+    params:
+      cl: <<read_cl:LOCAL_QUORUM>>
+    statements:
+      - verify-select: |
+          select * from <<keyspace:testdbcass>>.<<table:keyvalueuuid>> where "_id" = {seq_uuid};
+        verify-fields: _id->seq_uuid, key->seq_key, value->seq_value
+        tags:
+          name: verify
   - name: main-read
     tags:
       phase: main
