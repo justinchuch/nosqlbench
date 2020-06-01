@@ -1,17 +1,17 @@
-# nb -v run driver=mongodb yaml=mongodb-basic-uuid connection=mongodb://127.0.0.1 database=testdb tags=phase:rampup cycles=1M
+# nb -v run driver=mongodb yaml=mongodb-basic-uuid connection=mongodb://127.0.0.1 database=testdb tags=phase:rampup
 description: An exmaple of a basic mongo insert and find with UUID
 
 scenarios:
   default:
-    - run driver=mongodb tags==phase:rampup cycles===TEMPLATE(rampup-cycles,1000000) threads=auto
-    - run driver=mongodb tags==phase:main cycles===TEMPLATE(main-cycles,1000000) threads=auto
+    - run driver=mongodb tags==phase:rampup cycles===TEMPLATE(rampup-cycles,100000000) threads=auto
+    - run driver=mongodb tags==phase:main cycles===TEMPLATE(main-cycles,100000000) threads=auto
 bindings:
-  seq_uuid: Mod(<<uuidCount:1000000>>); ToHashedUUID() -> java.util.UUID; ToString() -> String
-  rw_uuid: <<uuidDist:Uniform(0,1000000)->long>>; ToInt(); ToHashedUUID() -> java.util.UUID; ToString() -> String
-  seq_key: Mod(<<keyCount:1000000>>L); ToString() -> String
-  seq_value: Mod(<<valueCount:1000000000>>L); <<valueSizeDist:Hash()>>; ToString() -> String
-  rw_key: <<keyDist:Uniform(0,1000000)->long>>; ToInt(); ToString() -> String
-  rw_value: <<valDist:Uniform(0,1000000000)->int>>; <<valueSizeDist:Hash()>>; ToString() -> String
+  seq_uuid: Mod(<<uuidCount:100000000>>L); ToHashedUUID() -> java.util.UUID; ToString() -> String
+  rw_uuid: <<uuidDist:Uniform(0,100000000)->long>>; ToHashedUUID() -> java.util.UUID; ToString() -> String
+  seq_key: Mod(<<keyCount:1000000>>L); ToInt()
+  seq_value: Mod(<<valueCount:1000000000>>L); <<valueSizeDist:Hash()>>; ToLong()
+  rw_key: <<keyDist:Uniform(0,1000000)->long>>; ToInt()
+  rw_value: <<valDist:Uniform(0,1000000000)->long>>; <<valueSizeDist:Hash()>>; ToLong()
 
 blocks:
   - name: rampup
@@ -23,7 +23,7 @@ blocks:
             insert: "<<collection:keyvalueuuid>>",
             documents: [ { _id: UUID("{seq_uuid}"),
                            key: {seq_key},
-                           value: {seq_value} } ]
+                           value: NumberLong({seq_value}) } ]
           }
         params:
           readPreference: primary
@@ -57,7 +57,7 @@ blocks:
             insert: "<<collection:keyvalueuuid>>",
             documents: [ { _id: UUID("{rw_uuid}")
                            key: {rw_key},
-                           value: {rw_value} } ]
+                           value: NumberLong({rw_value}) } ]
           }
         params:
           readPreference: primary
