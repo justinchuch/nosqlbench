@@ -44,12 +44,14 @@ public class MongoAction implements SyncAction {
             }
         }
 
+        // TODO: identify the query type from the queryBson?
+
         long nanoStartTime = System.nanoTime();
         for (int i = 1; i <= activity.getMaxTries(); i++) {
             activity.triesHisto.update(i);
 
             try (Timer.Context resultTime = activity.resultTimer.time()) {
-                // assuming the commands are one of these in the doc:
+                // assuming the command in the queryBson is one of these in the doc:
                 // https://docs.mongodb.com/manual/reference/command/nav-crud/
                 Document resultDoc = activity.getDatabase().runCommand(queryBson, rms.getReadPreference());
 
@@ -70,7 +72,9 @@ public class MongoAction implements SyncAction {
             }
         }
 
-        throw new RuntimeException(String.format("Exhausted max tries (%s) on cycle %s",
-                                                 activity.getMaxTries(), cycleValue));
+        logger.warn("Exhausted max tries ({}}) on cycle {}}", activity.getMaxTries(), cycleValue);
+//        throw new RuntimeException(String.format("Exhausted max tries (%s) on cycle %s",
+//                                                 activity.getMaxTries(), cycleValue));
+        return 1;
     }
 }
