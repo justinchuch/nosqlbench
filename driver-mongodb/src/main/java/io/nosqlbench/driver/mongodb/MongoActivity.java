@@ -52,8 +52,8 @@ public class MongoActivity extends SimpleActivity implements ActivityDefObserver
     Timer bindTimer;
     Timer resultTimer;
     Timer resultSuccessTimer;
-    Histogram resultSetSizeHisto;
     Histogram triesHisto;
+    Histogram resultSetSizeHisto;
 
     public MongoActivity(ActivityDef activityDef) {
         super(activityDef);
@@ -117,15 +117,18 @@ public class MongoActivity extends SimpleActivity implements ActivityDefObserver
         stmtsDocList.getStmts().stream().map(tagFilter::matchesTaggedResult).forEach(r -> logger.info(r.getLog()));
 
         List<StmtDef> stmts = stmtsDocList.getStmts(tagfilter);
-        for (StmtDef stmt : stmts) {
-            ParsedStmt parsed = stmt.getParsed().orError();
-            String statement = parsed.getPositionalStatement(Function.identity());
-            Objects.requireNonNull(statement);
+        if (stmts.isEmpty()) {
+            logger.error("No statements found for this activity");
+        } else {
+            for (StmtDef stmt : stmts) {
+                ParsedStmt parsed = stmt.getParsed().orError();
+                String statement = parsed.getPositionalStatement(Function.identity());
+                Objects.requireNonNull(statement);
 
-            sequencer.addOp(new ReadyMongoStatement(stmt),
-                            Long.parseLong(stmt.getParams().getOrDefault("ratio","1")));
+                sequencer.addOp(new ReadyMongoStatement(stmt),
+                                Long.parseLong(stmt.getParams().getOrDefault("ratio","1")));
+            }
         }
-
         return sequencer.resolve();
     }
 
