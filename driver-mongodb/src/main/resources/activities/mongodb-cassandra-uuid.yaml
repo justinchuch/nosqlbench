@@ -36,6 +36,10 @@ blocks:
           );
         tags:
           name: create-table
+      - truncate-table: |
+          truncate table <<keyspace:testdbcass>>.<<table:keyvalueuuid>>;
+        tags:
+          name: truncate-table
   - name: rampup
     tags:
       phase: rampup
